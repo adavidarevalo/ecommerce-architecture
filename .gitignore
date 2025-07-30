@@ -1,0 +1,36 @@
+# Terraform state and backup files
+*.tfstate
+*.tfstate.backup
+*.tfvars
+
+# Sensitive variable files (avoid committing secrets)
+*.tfvars.json
+*.auto.tfvars
+*.auto.tfvars.json
+
+# Local-only Terraform directories
+.terraform/
+.crc/
+
+# Terraform plan files
+*.tfplan
+
+# Cursor AI project config
+.cursor/
+
+# Logs and debug output
+*.log
+*.out
+*.err
+
+# Mac OS system files
+.DS_Store
+
+# Node modules or Python virtual environments (if used in CI/CD scripts)
+node_modules/
+venv/
+.env
+
+# Editor-specific
+.vscode/
+.idea/
