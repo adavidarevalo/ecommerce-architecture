@@ -42,39 +42,48 @@ module "vpc" {
 }
 
 # --- Application Load Balancer (ALB) in Private Subnets ---
-module "alb" {
-  source  = "terraform-aws-modules/alb/aws"
-  version = "~> 9.0"
+resource "aws_lb" "main" {
+  name               = "${var.project_name}-alb"
+  internal           = true
+  load_balancer_type = "application"
+  security_groups    = [aws_security_group.alb.id]
+  subnets            = module.vpc.private_subnets
 
-  name                       = "${var.project_name}-alb"
-  vpc_id                     = module.vpc.vpc_id
-  subnets                    = module.vpc.private_subnets
-  internal                   = true
   enable_deletion_protection = false
 
-  security_groups = [aws_security_group.alb.id]
+  tags = local.common_tags
+}
 
-  target_groups = [
-    {
-      name_prefix      = "app"
-      backend_protocol = "HTTP"
-      backend_port     = 3000
-      target_type      = "instance"
-      health_check = {
-        enabled             = true
-        healthy_threshold   = 2
-        unhealthy_threshold = 2
-        interval            = 30
-        matcher             = "200-399"
-        path                = "/"
-        port                = "3000"
-        protocol            = "HTTP"
-        timeout             = 5
-      }
-    }
-  ]
+resource "aws_lb_target_group" "app" {
+  name     = "${var.project_name}-app-tg"
+  port     = 3000
+  protocol = "HTTP"
+  vpc_id   = module.vpc.vpc_id
+
+  health_check {
+    enabled             = true
+    healthy_threshold   = 2
+    unhealthy_threshold = 2
+    interval            = 30
+    matcher             = "200-399"
+    path                = "/"
+    port                = "3000"
+    protocol            = "HTTP"
+    timeout             = 5
+  }
 
   tags = local.common_tags
+}
+
+resource "aws_lb_listener" "app" {
+  load_balancer_arn = aws_lb.main.arn
+  port              = "80"
+  protocol          = "HTTP"
+
+  default_action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.app.arn
+  }
 }
 
 # --- Security Groups ---
@@ -172,23 +181,7 @@ module "asg" {
   EOF
   )
 
-  target_group_arns = [module.alb.target_group_arns[0]]
+  target_group_arns = [aws_lb_target_group.app.arn]
 
-  tags = [
-    {
-      key                 = "Name"
-      value               = "${var.project_name}-asg"
-      propagate_at_launch = true
-    },
-    {
-      key                 = "Project"
-      value               = var.project_name
-      propagate_at_launch = true
-    },
-    {
-      key                 = "Environment"
-      value               = var.environment
-      propagate_at_launch = true
-    }
-  ]
+  tags = local.common_tags
 }

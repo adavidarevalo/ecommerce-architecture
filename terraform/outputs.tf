@@ -40,11 +40,6 @@ output "app_security_group_id" {
   value       = aws_security_group.app.id
 }
 
-output "database_security_group_id" {
-  description = "The ID of the database security group"
-  value       = aws_security_group.database.id
-}
-
 output "launch_template_id" {
   description = "The ID of the launch template"
   value       = module.asg.launch_template_id
@@ -54,8 +49,3 @@ output "asg_name" {
   description = "The name of the Auto Scaling Group"
   value       = module.asg.autoscaling_group_name
 }
-
-output "alb_dns_name" {
-  description = "The DNS name of the Application Load Balancer"
-  value       = module.alb.lb_dns_name
-} 
