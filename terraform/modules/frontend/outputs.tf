@@ -17,3 +17,13 @@ output "cloudfront_distribution_id" {
   description = "CloudFront distribution ID"
   value       = aws_cloudfront_distribution.website.id
 }
+
+output "waf_web_acl_id" {
+  description = "WAF Web ACL ID"
+  value       = aws_wafv2_web_acl.frontend.id
+}
+
+output "bucket_arn" {
+  description = "S3 bucket ARN"
+  value       = aws_s3_bucket.website.arn
+}

@@ -38,3 +38,19 @@ module "frontend" {
   acm_certificate_arn  = var.acm_certificate_arn
   frontend_domain      = var.frontend_domain
 }
+
+# DevOps Module
+module "devops" {
+  source = "./modules/devops"
+
+  project_name          = var.project_name
+  environment           = var.environment
+  vpc_id                = module.backend.vpc_id
+  public_subnets        = module.backend.public_subnets
+  private_subnets       = module.backend.private_subnets
+  codeconnection_arn    = var.codeconnection_arn
+  frontend_bucket_name  = module.frontend.bucket_name
+  frontend_bucket_arn   = module.frontend.bucket_arn
+  asg_name              = module.backend.asg_name
+  target_group_name     = module.backend.target_group_name
+}

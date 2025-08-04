@@ -43,6 +43,7 @@ variable "private_subnets" {
 variable "mongodb_uri" {
   description = "MongoDB connection string"
   type        = string
+  sensitive = true
 }
 
 variable "port" {
@@ -54,6 +55,7 @@ variable "port" {
 variable "jwt_secret" {
   description = "JWT secret key"
   type        = string
+  sensitive = true
 }
 
 variable "bucket_name" {
@@ -78,4 +80,10 @@ variable "frontend_domain" {
   description = "Frontend domain name"
   type        = string
   default     = "frontend.davidarevalo.info"
+}
+
+variable "codeconnection_arn" {
+  description = "CodeConnection ARN for GitHub"
+  type        = string
+  default     = "arn:aws:codeconnections:us-east-1:779846783544:connection/d3f23696-5474-41d7-a7f3-75b1fe570864"
 }

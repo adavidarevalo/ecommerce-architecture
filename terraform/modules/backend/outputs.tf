@@ -27,3 +27,13 @@ output "target_group_arn" {
   description = "Target group ARN"
   value       = aws_lb_target_group.app.arn
 }
+
+output "asg_name" {
+  description = "Auto Scaling Group name"
+  value       = module.asg.autoscaling_group_name
+}
+
+output "target_group_name" {
+  description = "Target group name"
+  value       = aws_lb_target_group.app.name
+}

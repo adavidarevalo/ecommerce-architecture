@@ -35,6 +35,116 @@ resource "aws_cloudfront_origin_access_control" "website" {
   signing_protocol                  = "sigv4"
 }
 
+# AWS WAF Web ACL
+resource "aws_wafv2_web_acl" "frontend" {
+  name  = "${var.project_name}-frontend-waf"
+  scope = "CLOUDFRONT"
+
+  default_action {
+    allow {}
+  }
+
+  # Rate limiting rule
+  rule {
+    name     = "RateLimitRule"
+    priority = 1
+
+    statement {
+      rate_based_statement {
+        limit              = 2000
+        aggregate_key_type = "IP"
+      }
+    }
+
+    visibility_config {
+      cloudwatch_metrics_enabled = true
+      metric_name                 = "RateLimitRule"
+      sampled_requests_enabled    = true
+    }
+
+    action {
+      block {}
+    }
+  }
+
+  # SQL injection protection
+  rule {
+    name     = "AWSManagedRulesSQLiRuleSet"
+    priority = 2
+
+    override_action {
+      none {}
+    }
+
+    statement {
+      managed_rule_group_statement {
+        name        = "AWSManagedRulesSQLiRuleSet"
+        vendor_name = "AWS"
+      }
+    }
+
+    visibility_config {
+      cloudwatch_metrics_enabled = true
+      metric_name                 = "AWSManagedRulesSQLiRuleSet"
+      sampled_requests_enabled    = true
+    }
+  }
+
+  # Core rule set (XSS, etc.)
+  rule {
+    name     = "AWSManagedRulesCommonRuleSet"
+    priority = 3
+
+    override_action {
+      none {}
+    }
+
+    statement {
+      managed_rule_group_statement {
+        name        = "AWSManagedRulesCommonRuleSet"
+        vendor_name = "AWS"
+      }
+    }
+
+    visibility_config {
+      cloudwatch_metrics_enabled = true
+      metric_name                 = "AWSManagedRulesCommonRuleSet"
+      sampled_requests_enabled    = true
+    }
+  }
+
+  # Known bad inputs
+  rule {
+    name     = "AWSManagedRulesKnownBadInputsRuleSet"
+    priority = 4
+
+    override_action {
+      none {}
+    }
+
+    statement {
+      managed_rule_group_statement {
+        name        = "AWSManagedRulesKnownBadInputsRuleSet"
+        vendor_name = "AWS"
+      }
+    }
+
+    visibility_config {
+      cloudwatch_metrics_enabled = true
+      metric_name                 = "AWSManagedRulesKnownBadInputsRuleSet"
+      sampled_requests_enabled    = true
+    }
+  }
+
+  visibility_config {
+    cloudwatch_metrics_enabled = true
+    metric_name                 = "${var.project_name}FrontendWAF"
+    sampled_requests_enabled    = true
+  }
+
+  tags = local.common_tags
+}
+
 # CloudFront Distribution
 resource "aws_cloudfront_distribution" "website" {
   origin {
@@ -79,6 +189,8 @@ resource "aws_cloudfront_distribution" "website" {
     ssl_support_method       = "sni-only"
     minimum_protocol_version = "TLSv1.2_2021"
   }
+
+  web_acl_id = aws_wafv2_web_acl.frontend.arn
 
   tags = local.common_tags
 }
