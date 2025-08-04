@@ -1,51 +1,19 @@
 output "vpc_id" {
-  description = "The ID of the VPC"
-  value       = module.vpc.vpc_id
+  description = "VPC ID"
+  value       = module.backend.vpc_id
 }
 
-output "vpc_cidr_block" {
-  description = "The CIDR block of the VPC"
-  value       = module.vpc.vpc_cidr_block
+output "alb_dns_name" {
+  description = "ALB DNS name"
+  value       = module.backend.alb_dns_name
 }
 
-output "public_subnet_ids" {
-  description = "List of IDs of public subnets"
-  value       = module.vpc.public_subnets
+output "public_subnets" {
+  description = "Public subnet IDs"
+  value       = module.backend.public_subnets
 }
 
-output "private_subnet_ids" {
-  description = "List of IDs of private subnets"
-  value       = module.vpc.private_subnets
-}
-
-
-
-output "internet_gateway_id" {
-  description = "The ID of the Internet Gateway"
-  value       = module.vpc.igw_id
-}
-
-output "nat_gateway_ids" {
-  description = "List of NAT Gateway IDs"
-  value       = module.vpc.natgw_ids
-}
-
-output "alb_security_group_id" {
-  description = "The ID of the ALB security group"
-  value       = aws_security_group.alb.id
-}
-
-output "app_security_group_id" {
-  description = "The ID of the application security group"
-  value       = aws_security_group.app.id
-}
-
-output "launch_template_id" {
-  description = "The ID of the launch template"
-  value       = module.asg.launch_template_id
-}
-
-output "asg_name" {
-  description = "The name of the Auto Scaling Group"
-  value       = module.asg.autoscaling_group_name
+output "private_subnets" {
+  description = "Private subnet IDs"
+  value       = module.backend.private_subnets
 }
