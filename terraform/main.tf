@@ -44,10 +44,10 @@ module "vpc" {
 # --- Application Load Balancer (ALB) in Private Subnets ---
 resource "aws_lb" "main" {
   name               = "${var.project_name}-alb"
-  internal           = true
+  internal           = false
   load_balancer_type = "application"
   security_groups    = [aws_security_group.alb.id]
-  subnets            = module.vpc.private_subnets
+  subnets            = module.vpc.public_subnets
 
   enable_deletion_protection = false
 
@@ -56,7 +56,7 @@ resource "aws_lb" "main" {
 
 resource "aws_lb_target_group" "app" {
   name     = "${var.project_name}-app-tg"
-  port     = 3000
+  port     = 80
   protocol = "HTTP"
   vpc_id   = module.vpc.vpc_id
 
@@ -67,7 +67,7 @@ resource "aws_lb_target_group" "app" {
     interval            = 30
     matcher             = "200-399"
     path                = "/"
-    port                = "3000"
+    port                = "80"
     protocol            = "HTTP"
     timeout             = 5
   }
@@ -113,9 +113,9 @@ resource "aws_security_group" "app" {
   vpc_id      = module.vpc.vpc_id
 
   ingress {
-    from_port       = 3000
-    to_port         = 3000
-    protocol        = "tcp"
+    from_port       = 80
+    to_port         = 80
+  protocol          = "tcp"
     security_groups = [aws_security_group.alb.id]
   }
 
@@ -158,28 +158,11 @@ module "asg" {
   instance_type   = "t2.micro"
   security_groups = [aws_security_group.app.id]
 
-  user_data = base64encode(<<-EOF
-    #!/bin/bash
-    apt-get update -y
-    apt-get install -y curl
-    curl -fsSL https://deb.nodesource.com/setup_18.x | bash -
-    apt-get install -y nodejs
-    npm install -g pm2
-    mkdir -p /opt/app
-    cat <<EON > /opt/app/index.js
-    const express = require('express');
-    const app = express();
-    app.get('/', (req, res) => res.send('Hello from Express behind ALB!'));
-    app.listen(3000, () => console.log('App running on port 3000'));
-    EON
-    cd /opt/app
-    npm init -y
-    npm install express
-    pm2 start index.js
-    pm2 startup
-    pm2 save
-  EOF
-  )
+
+  user_data = base64encode(templatefile("${path.module}/scripts/init.sh.tpl", {
+    mongodb_uri = var.mongodb_uri,
+    jwt_secret  = var.jwt_secret
+  }))
 
   target_group_arns = [aws_lb_target_group.app.arn]
 

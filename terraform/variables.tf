@@ -39,5 +39,19 @@ variable "private_subnets" {
   type        = list(string)
   default     = ["10.0.11.0/24", "10.0.12.0/24"]
 }
+//User Data
+variable "mongodb_uri" {
+  description = "MongoDB connection string"
+  type        = string
+}
 
- 
+variable "port" {
+  description = "Express app port"
+  type        = string
+  default     = "3000"
+}
+
+variable "jwt_secret" {
+  description = "JWT secret key"
+  type        = string
+}
