@@ -52,5 +52,4 @@ module "devops" {
   frontend_bucket_name  = module.frontend.bucket_name
   frontend_bucket_arn   = module.frontend.bucket_arn
   asg_name              = module.backend.asg_name
-  target_group_name     = module.backend.target_group_name
 }

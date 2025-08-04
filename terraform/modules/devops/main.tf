@@ -94,14 +94,9 @@ resource "aws_iam_role_policy" "codepipeline_policy" {
       {
         Effect = "Allow"
         Action = [
-          "codedeploy:CreateDeployment",
-          "codedeploy:GetApplication",
-          "codedeploy:GetApplicationRevision",
-          "codedeploy:GetDeployment",
-          "codedeploy:GetDeploymentConfig",
-          "codedeploy:RegisterApplicationRevision"
+          "lambda:InvokeFunction"
         ]
-        Resource = "*"
+        Resource = aws_lambda_function.backend_deploy.arn
       }
     ]
   })
@@ -251,15 +246,13 @@ resource "aws_codepipeline" "frontend_pipeline" {
 
     action {
       name            = "Deploy-Backend"
-      category        = "Deploy"
+      category        = "Invoke"
       owner           = "AWS"
-      provider        = "CodeDeploy"
+      provider        = "Lambda"
       version         = "1"
-      input_artifacts = ["source_output"]
 
       configuration = {
-        ApplicationName     = aws_codedeploy_application.backend.name
-        DeploymentGroupName = aws_codedeploy_deployment_group.backend.deployment_group_name
+        FunctionName = aws_lambda_function.backend_deploy.function_name
       }
     }
   }
@@ -269,17 +262,59 @@ resource "aws_codepipeline" "frontend_pipeline" {
 
 
 
-# CodeDeploy Application
-resource "aws_codedeploy_application" "backend" {
-  compute_platform = "Server"
-  name             = "${var.project_name}-backend-app"
+# Lambda function for backend deployment
+resource "aws_lambda_function" "backend_deploy" {
+  filename         = "backend_deploy.zip"
+  function_name    = "${var.project_name}-backend-deploy"
+  role            = aws_iam_role.lambda_role.arn
+  handler         = "index.handler"
+  runtime         = "python3.9"
+  timeout         = 300
+
+  environment {
+    variables = {
+      ASG_NAME = var.asg_name
+    }
+  }
 
   tags = local.common_tags
 }
 
-# IAM Role for CodeDeploy
-resource "aws_iam_role" "codedeploy_role" {
-  name = "${var.project_name}-codedeploy-role"
+# Lambda deployment package
+data "archive_file" "lambda_zip" {
+  type        = "zip"
+  output_path = "backend_deploy.zip"
+  source {
+    content = <<EOF
+import boto3
+import os
+
+def handler(event, context):
+    asg_client = boto3.client('autoscaling')
+    asg_name = os.environ['ASG_NAME']
+    
+    # Start instance refresh for Blue/Green deployment
+    response = asg_client.start_instance_refresh(
+        AutoScalingGroupName=asg_name,
+        Strategy='Rolling',
+        Preferences={
+            'MinHealthyPercentage': 50,
+            'InstanceWarmup': 300
+        }
+    )
+    
+    return {
+        'statusCode': 200,
+        'body': f'Instance refresh started: {response["InstanceRefreshId"]}'
+    }
+EOF
+    filename = "index.py"
+  }
+}
+
+# IAM Role for Lambda
+resource "aws_iam_role" "lambda_role" {
+  name = "${var.project_name}-lambda-deploy-role"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -288,7 +323,7 @@ resource "aws_iam_role" "codedeploy_role" {
         Action = "sts:AssumeRole"
         Effect = "Allow"
         Principal = {
-          Service = "codedeploy.amazonaws.com"
+          Service = "lambda.amazonaws.com"
         }
       }
     ]
@@ -297,43 +332,33 @@ resource "aws_iam_role" "codedeploy_role" {
   tags = local.common_tags
 }
 
-resource "aws_iam_role_policy_attachment" "codedeploy_policy" {
-  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSCodeDeployRole"
-  role       = aws_iam_role.codedeploy_role.name
-}
+resource "aws_iam_role_policy" "lambda_policy" {
+  name = "${var.project_name}-lambda-deploy-policy"
+  role = aws_iam_role.lambda_role.id
 
-# CodeDeploy Deployment Group
-resource "aws_codedeploy_deployment_group" "backend" {
-  app_name              = aws_codedeploy_application.backend.name
-  deployment_group_name = "${var.project_name}-backend-dg"
-  service_role_arn      = aws_iam_role.codedeploy_role.arn
-
-  deployment_config_name = "CodeDeployDefault.AutoScalingGroupInPlaceBlueGreen"
-
-  auto_scaling_groups = [var.asg_name]
-
-  blue_green_deployment_config {
-    terminate_blue_instances_on_deployment_success {
-      action                         = "TERMINATE"
-      termination_wait_time_in_minutes = 5
-    }
-
-    deployment_ready_option {
-      action_on_timeout = "CONTINUE_DEPLOYMENT"
-    }
-
-    green_fleet_provisioning_option {
-      action = "COPY_AUTO_SCALING_GROUP"
-    }
-  }
-
-  load_balancer_info {
-    target_group_info {
-      name = var.target_group_name
-    }
-  }
-
-  tags = local.common_tags
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "logs:CreateLogGroup",
+          "logs:CreateLogStream",
+          "logs:PutLogEvents"
+        ]
+        Resource = "arn:aws:logs:*:*:*"
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "autoscaling:StartInstanceRefresh",
+          "autoscaling:DescribeInstanceRefreshes",
+          "autoscaling:DescribeAutoScalingGroups"
+        ]
+        Resource = "*"
+      }
+    ]
+  })
 }
 
 # Local values
