@@ -55,3 +55,27 @@ variable "jwt_secret" {
   description = "JWT secret key"
   type        = string
 }
+
+variable "bucket_name" {
+  description = "S3 bucket name for website"
+  type        = string
+  default     = "davidarevalo.info"
+}
+
+variable "acm_certificate_arn" {
+  description = "ACM certificate ARN for ALB"
+  type        = string
+  default     = "arn:aws:acm:us-east-1:779846783544:certificate/4a18358f-19fa-43fd-ab8f-c39e5a4da178"
+}
+
+variable "backend_domain" {
+  description = "Backend domain name"
+  type        = string
+  default     = "backend.davidarevalo.info"
+}
+
+variable "frontend_domain" {
+  description = "Frontend domain name"
+  type        = string
+  default     = "frontend.davidarevalo.info"
+}

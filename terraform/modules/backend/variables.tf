@@ -42,3 +42,13 @@ variable "jwt_secret" {
   description = "JWT secret key"
   type        = string
 }
+
+variable "acm_certificate_arn" {
+  description = "ACM certificate ARN for ALB"
+  type        = string
+}
+
+variable "backend_domain" {
+  description = "Backend domain name"
+  type        = string
+}
