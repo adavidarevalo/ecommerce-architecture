@@ -59,7 +59,7 @@ variable "jwt_secret" {
 variable "bucket_name" {
   description = "S3 bucket name for website"
   type        = string
-  default     = "davidarevalo.info"
+  default     = "frontend.davidarevalo.info"
 }
 
 variable "acm_certificate_arn" {

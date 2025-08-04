@@ -1,6 +1,6 @@
 # S3 Bucket for static website
 resource "aws_s3_bucket" "website" {
-  bucket = var.bucket_name
+  bucket = var.frontend_domain
 
   tags = local.common_tags
 }
@@ -29,7 +29,7 @@ resource "aws_s3_bucket_public_access_block" "website" {
 # CloudFront Origin Access Control
 resource "aws_cloudfront_origin_access_control" "website" {
   name                              = "${var.project_name}-oac"
-  description                       = "OAC for ${var.bucket_name}"
+  description                       = "OAC for ${var.frontend_domain}"
   origin_access_control_origin_type = "s3"
   signing_behavior                  = "always"
   signing_protocol                  = "sigv4"
@@ -40,7 +40,7 @@ resource "aws_cloudfront_distribution" "website" {
   origin {
     domain_name              = aws_s3_bucket.website.bucket_regional_domain_name
     origin_access_control_id = aws_cloudfront_origin_access_control.website.id
-    origin_id                = "S3-${var.bucket_name}"
+    origin_id                = "S3-${var.frontend_domain}"
   }
 
   enabled             = true
@@ -50,7 +50,7 @@ resource "aws_cloudfront_distribution" "website" {
   default_cache_behavior {
     allowed_methods        = ["DELETE", "GET", "HEAD", "OPTIONS", "PATCH", "POST", "PUT"]
     cached_methods         = ["GET", "HEAD"]
-    target_origin_id       = "S3-${var.bucket_name}"
+    target_origin_id       = "S3-${var.frontend_domain}"
     compress               = true
     viewer_protocol_policy = "redirect-to-https"
 
